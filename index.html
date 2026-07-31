@@ -172,11 +172,8 @@
   .gadd button:hover{background:var(--lime);color:#1A2005}
   /* タスク名のその場編集 */
   .editinp{flex:1;min-width:0;background:#120D1C;border:2px solid var(--cyan);border-radius:6px;color:var(--ink);font-family:var(--sans);font-size:17px;padding:4px 9px;outline:none}
-  /* 閲覧モード（共有リンクで開いた人）— 触れる要素を消す */
-  body.viewonly .del,body.viewonly .todaybtn,body.viewonly .gplus,body.viewonly .gadd{display:none}
-  body.viewonly .tasks li{cursor:default}
-  body.viewonly .tasks li:hover{background:none}
-  .viewbadge{font-weight:900;font-size:13px;padding:2px 10px;border:2.5px solid #0C0813;border-radius:99px;background:var(--gold);color:#332600;margin-left:8px;white-space:nowrap}
+  /* 共有中バッジ */
+  .viewbadge{font-weight:900;font-size:13px;padding:2px 10px;border:2.5px solid #0C0813;border-radius:99px;background:var(--lime);color:#1A2005;margin-left:8px;white-space:nowrap}
 
   /* ---- ambient bg splats ---- */
   .amb{position:fixed;z-index:0;pointer-events:none;border-radius:58% 42% 63% 37%/55% 48% 52% 45%;animation:floaty 9s ease-in-out infinite}
@@ -382,14 +379,14 @@
     </div>
     <div id="syncpanel" hidden style="margin-top:8px">
       <div class="synchint" style="margin-top:0">
-        盤面（クエストと今日のバトル）を private リポジトリ <b>ki325ko/quest-data</b> に置いて共有する。
-        ご褒美・連続日数はこの端末だけに残る。
+        盤面（クエスト・グループ・今日のバトル）を private リポジトリ <b>ki325ko/quest-data</b> に置いて3人で共有する。
+        ご褒美・連続日数はこの端末だけに残る。<b>3人とも編集できる</b>。
       </div>
       <div class="addrow">
-        <input id="tokw" type="password" placeholder="書き込み用トークン（代表だけが入れる）" style="flex:1 1 100%">
+        <input id="tokw" type="password" placeholder="共有トークン（Contents: Read and write）" style="flex:1 1 100%">
       </div>
       <div class="addrow">
-        <input id="tokr" type="password" placeholder="閲覧配布用トークン（read-only。共有リンクの生成に使う）" style="flex:1 1 100%">
+        <input id="myname" type="text" maxlength="8" placeholder="あなたの名前（代表 / ひろや / さば）" style="flex:1 1 100%">
       </div>
       <div class="addrow">
         <button id="syncsave" type="button">保存して同期する</button>
@@ -483,28 +480,31 @@
   setTimeout(()=>{ document.getElementById("xpfill").style.width = Math.min(100, inRank) + "%"; }, 150);
 
   // ---- 共有の設定（盤面は private リポジトリ ki325ko/quest-data の board.json に置く）----
-  // 代表 = 書き込み用トークンを入れて編集する（edit）
-  // ひろや・さば = 共有リンク #t=<閲覧用トークン>&m=view を開くだけ（view）
+  // 3人ともトークン1つ（Contents: Read and write）で編集できる。
+  // 共有リンク #t=<token>&n=<名前> を開くと、その端末に取り込まれて同期が始まる。
   const SYNC = { owner: "ki325ko", repo: "quest-data", path: "board.json", branch: "master" };
   const TKEY = "lq-sync-v1";
-  let SY = JSON.parse(localStorage.getItem(TKEY) || "null") || { w: "", r: "", mode: "local" };
+  let SY = JSON.parse(localStorage.getItem(TKEY) || "null") || { w: "", name: "" };
   (() => {
     const h = location.hash.replace(/^#/, "");
     if (!h) return;
     const q = new URLSearchParams(h);
     const t = q.get("t");
     if (!t) return;
-    SY = { w: "", r: t, mode: q.get("m") === "view" ? "view" : "local" };
+    SY = { w: t, name: q.get("n") || SY.name || "" };
     localStorage.setItem(TKEY, JSON.stringify(SY));
     history.replaceState(null, "", location.pathname); // トークンをURLに残さない
   })();
-  let MODE = SY.mode === "view" ? "view" : (SY.w ? "edit" : "local");
-  const curToken = () => (MODE === "view" ? SY.r : SY.w);
+  let MODE = SY.w ? "edit" : "local";
 
   // ---- task app（旧 kanri-log を統合。端末の localStorage ＋ 上の共有データが台帳）----
   const KEY = "lq-app-v1";
-  let S = (MODE === "view" ? null : JSON.parse(localStorage.getItem(KEY) || "null"))
+  let S = JSON.parse(localStorage.getItem(KEY) || "null")
        || { v: 2, seed: 0, tasks: [], groups: [], today: [], reward: "", streak: 0, lastAll: null, open: {}, showDone: false };
+  S.tomb = S.tomb || []; S.gtomb = S.gtomb || [];   // 削除の記録（他端末に「消した」を伝えるため）
+  // 変更したものに時刻を刻む。同時編集は「あとに触った方が勝つ」で解決する
+  const now = () => Date.now();
+  const touch = x => { if (x) x.ts = now(); return x; };
   S.groups = S.groups || []; S.open = S.open || {}; S.showDone = !!S.showDone;
   if (S.allOpen === undefined) S.allOpen = true;
   const mkid = p => p + Math.random().toString(36).slice(2, 9);
@@ -524,9 +524,8 @@
     S.seed = DATA.seedv;
   }
   const save = () => {
-    if (MODE === "view") return;          // 閲覧モードは端末に残さない・書き戻さない
     localStorage.setItem(KEY, JSON.stringify(S));
-    schedulePush();                        // 代表のときだけクラウドへ（関数宣言なので巻き上げ済み）
+    schedulePush();                        // 共有オンなら少し待ってからクラウドへ（関数宣言なので巻き上げ済み）
   };
   const todayStr = new Date().toLocaleDateString("sv-SE");
   // 日付が変わったら、前日までに完了したタスクを「今日のバトル」から自動で外す（未完了は持ち越し）
@@ -579,7 +578,7 @@
     S.groups.forEach(g => { const o = document.createElement("option"); o.value = g.id; o.textContent = g.name; sel.append(o); });
     sel.value = x.gid || "";
     sel.addEventListener("click", e => e.stopPropagation());
-    sel.addEventListener("change", () => { x.gid = sel.value || undefined; save(); render(); });
+    sel.addEventListener("change", () => { x.gid = sel.value || undefined; touch(x); save(); render(); });
     return sel;
   }
   // タスク名をその場で書き換える（✎）。Enter/フォーカス外れで確定、Escで取り消し
@@ -594,7 +593,7 @@
     const commit = () => {
       if (closed) return; closed = true;
       const v = inp.value.trim();
-      if (v) x.t = v;
+      if (v && v !== x.t) { x.t = v; touch(x); }
       save(); render(); done();
     };
     inp.addEventListener("click", e => e.stopPropagation());
@@ -629,7 +628,7 @@
       const rb = document.createElement("span"); rb.className = "del"; rb.title = "今日から外す"; rb.textContent = "↩";
       rb.addEventListener("click", e => {
         e.stopPropagation();
-        S.today = S.today.filter(id => id !== x.id);
+        S.today = S.today.filter(id => id !== x.id); S.todayTs = now();
         save(); render();
       });
       li.append(ed, rb);
@@ -642,6 +641,7 @@
         e.stopPropagation();
         const i = S.today.indexOf(x.id);
         if (i >= 0) S.today.splice(i, 1); else S.today.push(x.id);
+        S.todayTs = now();
         save(); render();
       });
       const mv = document.createElement("span"); mv.className = "del"; mv.title = "グループ移動"; mv.textContent = "▤";
@@ -650,14 +650,15 @@
       del.addEventListener("click", e => {
         e.stopPropagation();
         S.tasks = S.tasks.filter(y => y.id !== x.id);
-        S.today = S.today.filter(id => id !== x.id);
+        S.tomb.push({ id: x.id, ts: now() });      // 消したことを他の端末に伝える
+        S.today = S.today.filter(id => id !== x.id); S.todayTs = now();
         save(); render();
       });
       li.append(tb, ed, mv, del);
     }
-    if (MODE !== "view") li.addEventListener("click", () => {
+    li.addEventListener("click", () => {
       if (editing) return;
-      x.done = !x.done; x.doneAt = x.done ? todayStr : undefined; save(); render();
+      x.done = !x.done; x.doneAt = x.done ? todayStr : undefined; touch(x); save(); render();
     });
     return li;
   }
@@ -717,6 +718,7 @@
           a.addEventListener("click", e => {
             e.stopPropagation();
             [S.groups[gi], S.groups[gi + di]] = [S.groups[gi + di], S.groups[gi]];
+            S.groupsTs = now();
             save(); render();
           });
           return a;
@@ -728,6 +730,7 @@
         gd.addEventListener("click", e => {
           e.stopPropagation();
           S.groups = S.groups.filter(g => g.id !== b.id);
+          S.gtomb.push({ id: b.id, ts: now() }); S.groupsTs = now();
           save(); render();
         });
         head.append(gd);
@@ -746,7 +749,7 @@
         const gadd = () => {
           const v = gin.value.trim();
           if (!v) { addOpen = null; save(); render(); return; }
-          S.tasks.push({ id: mkid("t"), t: v, done: false, pri: "med", gid: b.id || undefined });
+          S.tasks.push(touch({ id: mkid("t"), t: v, done: false, pri: "med", gid: b.id || undefined }));
           gin.value = ""; addFocus = key; save(); render();
         };
         gbt.addEventListener("click", e => { e.stopPropagation(); gadd(); });
@@ -791,8 +794,8 @@
     const inp = document.getElementById("newgroup");
     const v = inp.value.trim();
     if (!v || S.groups.some(g => g.name === v)) return;
-    const g = { id: mkid("g"), name: v };
-    S.groups.push(g); S.open[g.id] = true;
+    const g = touch({ id: mkid("g"), name: v });
+    S.groups.push(g); S.open[g.id] = true; S.groupsTs = now();
     inp.value = ""; save(); render();
   });
   document.getElementById("addbtn").addEventListener("click", () => {
@@ -800,12 +803,12 @@
     const v = inp.value.trim();
     if (!v) return;
     const gsel = document.getElementById("newgroupsel").value;
-    S.tasks.push({
+    S.tasks.push(touch({
       id: mkid("t"), t: v, done: false,
       due: document.getElementById("newdue").value || undefined,
       pri: document.getElementById("newpri").value,
       gid: gsel || undefined
-    });
+    }));
     if (gsel) S.open[gsel] = true; else S.open["_none"] = true;
     inp.value = ""; document.getElementById("newdue").value = "";
     save(); render();
@@ -866,8 +869,43 @@
   setBakInfo();
 
   // ---- 共有（GitHub contents API で private リポジトリの board.json を読み書き）----
-  // 共有するのは tasks / groups / today。ご褒美・連続日数・開閉状態は各端末のもの
+  // 共有するのは tasks / groups / today。ご褒美・連続日数・開閉状態は各端末のもの。
+  // 3人が同時に触るので、上書きではなく「1件ずつ、あとに触った方を採用」でマージする。
   let cloudSha = null, pushTimer = null, pushing = false, pushAgain = false;
+  const KEEP_TOMB = 30 * 86400000;   // 削除の記録は30日で掃除する
+
+  function mergeBoard(rb) {
+    // 削除記録をまとめる（同じidなら新しい方）
+    const tomb = new Map(), gtomb = new Map();
+    [...(rb.tomb || []), ...(S.tomb || [])].forEach(t => { const e = tomb.get(t.id); if (!e || t.ts > e.ts) tomb.set(t.id, t); });
+    [...(rb.gtomb || []), ...(S.gtomb || [])].forEach(t => { const e = gtomb.get(t.id); if (!e || t.ts > e.ts) gtomb.set(t.id, t); });
+
+    // タスク: idごとに ts が新しい方を採用。削除の方が新しければ消す
+    const tm = new Map();
+    (rb.tasks || []).forEach(t => tm.set(t.id, t));
+    (S.tasks || []).forEach(t => { const r = tm.get(t.id); if (!r || (t.ts || 0) >= (r.ts || 0)) tm.set(t.id, t); });
+    S.tasks = [...tm.values()].filter(t => { const d = tomb.get(t.id); return !d || d.ts < (t.ts || 0); });
+
+    // グループ: 同上。並び順は「あとで並べ替えた方」の順に従い、そこに無いものは末尾へ
+    const gm = new Map();
+    (rb.groups || []).forEach(g => gm.set(g.id, g));
+    (S.groups || []).forEach(g => { const r = gm.get(g.id); if (!r || (g.ts || 0) >= (r.ts || 0)) gm.set(g.id, g); });
+    const order = (rb.groupsTs || 0) > (S.groupsTs || 0) ? (rb.groups || []) : (S.groups || []);
+    const seen = new Set(), out = [];
+    const alive = id => { const d = gtomb.get(id); const g = gm.get(id); return g && (!d || d.ts < (g.ts || 0)); };
+    order.forEach(g => { if (!seen.has(g.id) && alive(g.id)) { out.push(gm.get(g.id)); seen.add(g.id); } });
+    [...gm.keys()].forEach(id => { if (!seen.has(id) && alive(id)) { out.push(gm.get(id)); seen.add(id); } });
+    S.groups = out;
+    S.groupsTs = Math.max(S.groupsTs || 0, rb.groupsTs || 0);
+
+    // 今日のバトルの編成は「あとに編成した方」を丸ごと採用
+    if ((rb.todayTs || 0) > (S.todayTs || 0)) { S.today = rb.today || []; S.todayTs = rb.todayTs; }
+    S.today = (S.today || []).filter(id => S.tasks.some(t => t.id === id));
+
+    const cut = now() - KEEP_TOMB;
+    S.tomb = [...tomb.values()].filter(t => t.ts > cut);
+    S.gtomb = [...gtomb.values()].filter(t => t.ts > cut);
+  }
   const apiURL = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`;
   const b64enc = s => {
     const b = new TextEncoder().encode(s); let out = "";
@@ -878,26 +916,27 @@
   const hhmm = () => new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
   function setSync(msg) { const el = document.getElementById("syncinfo"); if (el) el.innerHTML = msg; }
   function syncIdle() {
-    if (MODE === "view") setSync(`閲覧モード（代表の盤面）／最終読み込み ${lastSync || "—"}。30秒ごとに自動更新`);
-    else if (MODE === "edit") setSync(`同期オン（代表）／最終同期 ${lastSync || "—"}。変更は自動でチームに反映される`);
-    else setSync("この端末だけで動いている（共有オフ）。⚙同期設定 からトークンを入れると共有できる");
+    if (MODE === "edit") setSync(`共有オン（${SY.name || "名前未設定"}）／最終同期 ${lastSync || "—"}${lastBy ? `　最後に触ったのは ${lastBy}` : ""}。3人の変更が自動で混ざる`);
+    else setSync("この端末だけで動いている（共有オフ）。⚙同期設定 からトークンを入れると3人で共有できる");
   }
-  let lastSync = "";
+  let lastSync = "", lastBy = "";
 
   async function pull(quiet) {
-    const tk = curToken();
-    if (!tk) { syncIdle(); return; }
+    if (!SY.w) { syncIdle(); return; }
+    if (editing) return;                     // 名前を書き換えている最中は割り込まない
     if (!quiet) setSync("読み込み中…");
     try {
       const r = await fetch(apiURL() + "?ref=" + SYNC.branch + "&_=" + Date.now(),
-        { headers: { Authorization: "Bearer " + tk, Accept: "application/vnd.github+json" }, cache: "no-store" });
+        { headers: { Authorization: "Bearer " + SY.w, Accept: "application/vnd.github+json" }, cache: "no-store" });
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
       const b = JSON.parse(b64dec(j.content));
       cloudSha = j.sha;
-      S.tasks = b.tasks || []; S.groups = b.groups || []; S.today = b.today || [];
-      if (MODE !== "view") localStorage.setItem(KEY, JSON.stringify(S));
+      mergeBoard(b);
+      lastBy = b.by || "";
+      localStorage.setItem(KEY, JSON.stringify(S));
       lastSync = hhmm(); render(); syncIdle();
+      return b;
     } catch (e) {
       setSync(`⚠ 読み込めなかった（${e.message}）。トークンの期限切れか通信エラー。⚙同期設定 を確認`);
     }
@@ -908,28 +947,44 @@
     clearTimeout(pushTimer);
     pushTimer = setTimeout(doPush, 1500);   // 連続操作をまとめてから1回だけ送る
   }
+  const boardJSON = () => JSON.stringify({
+    v: 2, updatedAt: new Date().toISOString(), by: SY.name || "だれか",
+    tasks: S.tasks, groups: S.groups, groupsTs: S.groupsTs || 0,
+    today: S.today, todayTs: S.todayTs || 0, tomb: S.tomb, gtomb: S.gtomb
+  }, null, 1);
+
   async function doPush() {
+    pushTimer = null;
     if (MODE !== "edit" || !SY.w) return;
     if (pushing) { pushAgain = true; return; }
     pushing = true;
     setSync("保存中…");
     const hd = { Authorization: "Bearer " + SY.w, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
     try {
-      const body = {
-        message: `board ${new Date().toISOString().slice(0, 16)}`,
-        content: b64enc(JSON.stringify({ v: 1, updatedAt: new Date().toISOString(), by: "代表", tasks: S.tasks, groups: S.groups, today: S.today }, null, 1)),
-        branch: SYNC.branch
-      };
+      // 送る前に必ず取り直してマージする（他の人の変更を消さないため）
+      const g0 = await fetch(apiURL() + "?ref=" + SYNC.branch + "&_=" + Date.now(), { headers: hd, cache: "no-store" });
+      if (g0.ok) {
+        const j0 = await g0.json();
+        cloudSha = j0.sha;
+        try { const rb = JSON.parse(b64dec(j0.content)); mergeBoard(rb); lastBy = rb.by || lastBy; } catch (e) {}
+        localStorage.setItem(KEY, JSON.stringify(S));
+        render();
+      }
+      const body = { message: `board ${new Date().toISOString().slice(0, 16)} by ${SY.name || "?"}`, content: b64enc(boardJSON()), branch: SYNC.branch };
       if (cloudSha) body.sha = cloudSha;
       let r = await fetch(apiURL(), { method: "PUT", headers: hd, body: JSON.stringify(body) });
-      if (r.status === 409 || r.status === 422) {   // sha ずれ → 取り直して1回だけ再送
-        const g = await fetch(apiURL() + "?ref=" + SYNC.branch, { headers: hd, cache: "no-store" });
-        if (g.ok) { cloudSha = (await g.json()).sha; body.sha = cloudSha; }
+      if (r.status === 409 || r.status === 422) {   // 送っている間に誰かが書いた → もう一度だけ取り直して合流
+        const g = await fetch(apiURL() + "?ref=" + SYNC.branch + "&_=" + Date.now(), { headers: hd, cache: "no-store" });
+        if (g.ok) {
+          const j = await g.json(); cloudSha = j.sha;
+          try { mergeBoard(JSON.parse(b64dec(j.content))); } catch (e) {}
+          body.sha = cloudSha; body.content = b64enc(boardJSON());
+        }
         r = await fetch(apiURL(), { method: "PUT", headers: hd, body: JSON.stringify(body) });
       }
       if (!r.ok) throw new Error("HTTP " + r.status);
       cloudSha = (await r.json()).content.sha;
-      lastSync = hhmm(); syncIdle();
+      lastSync = hhmm(); lastBy = SY.name || ""; syncIdle();
     } catch (e) {
       setSync(`⚠ 保存できなかった（${e.message}）。この端末には残っているので、通信が戻ったら何か操作すれば再送される`);
     } finally {
@@ -942,13 +997,12 @@
   document.getElementById("syncbtn").addEventListener("click", () => {
     const p = document.getElementById("syncpanel");
     p.hidden = !p.hidden;
-    if (!p.hidden) { document.getElementById("tokw").value = SY.w || ""; document.getElementById("tokr").value = SY.r || ""; }
+    if (!p.hidden) { document.getElementById("tokw").value = SY.w || ""; document.getElementById("myname").value = SY.name || ""; }
   });
   document.getElementById("syncclose").addEventListener("click", () => { document.getElementById("syncpanel").hidden = true; });
   document.getElementById("syncsave").addEventListener("click", async () => {
     SY.w = document.getElementById("tokw").value.trim();
-    SY.r = document.getElementById("tokr").value.trim();
-    SY.mode = SY.w ? "edit" : "local";
+    SY.name = document.getElementById("myname").value.trim();
     localStorage.setItem(TKEY, JSON.stringify(SY));
     MODE = SY.w ? "edit" : "local";
     document.getElementById("syncpanel").hidden = true;
@@ -956,26 +1010,21 @@
   });
   document.getElementById("syncpull").addEventListener("click", () => pull());
   document.getElementById("sharebtn").addEventListener("click", () => {
-    if (!SY.r) { setSync("⚠ 先に ⚙同期設定 で「閲覧配布用トークン」を入れる（read-only のトークン）"); return; }
-    const url = location.origin + location.pathname + "#t=" + SY.r + "&m=view";
-    const done = () => setSync("共有リンクをコピーした。ひろや・さばに送れば、開くだけで代表の盤面が見える");
+    if (!SY.w) { setSync("⚠ 先に ⚙同期設定 でトークンを入れる"); return; }
+    const url = location.origin + location.pathname + "#t=" + SY.w;
+    const done = () => setSync("共有リンクをコピーした。ひろや・さばに送れば、開くだけで同じ盤面に入れる（3人とも編集できる）");
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => openBakPanel(url));
     else openBakPanel(url);
   });
 
-  // 閲覧モードの見た目と自動更新
-  if (MODE === "view") {
-    document.body.classList.add("viewonly");
+  // 共有オンなら定期的に取り込む（編集中・送信待ち中は避ける）
+  if (MODE === "edit") {
     const tag = document.querySelector(".season-tag");
-    if (tag) tag.insertAdjacentHTML("beforeend", '<span class="viewbadge">閲覧モード｜代表の盤面</span>');
-    ["newgroup", "newtask", "bakcopy", "rewardinp", "syncbtn"].forEach(id => {
-      const e = document.getElementById(id); const row = e && e.closest(".addrow");
-      if (row) row.hidden = true;
-    });
-    setInterval(() => pull(true), 30000);
+    if (tag) tag.insertAdjacentHTML("beforeend", `<span class="viewbadge">共有中｜${SY.name || "名前未設定"}</span>`);
+    setInterval(() => { if (!editing && !pushing && !pushTimer) pull(true); }, 30000);
   }
   syncIdle();
-  if (curToken()) pull();
+  if (SY.w) pull();
 
   // ambient background ink
   const AMB = ["#F0308F","#A8E320","#26C9E0","#F5A623"];
