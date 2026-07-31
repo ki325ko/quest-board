@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="theme-color" content="#16101F">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E2%9A%94%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<title>LIENS QUEST</title>
+<style>
+  :root{
+    --bg:#16101F; --panel:#221A30; --panel2:#1B1428; --line:#3A2D52;
+    --ink:#F4EFFA; --muted:#9C8FB5; --faint:#6B5F87;
+    --pink:#F0308F; --lime:#A8E320; --cyan:#26C9E0; --orange:#F5A623; --gold:#F2C744;
+    --mono:Consolas,"Courier New",monospace;
+    --sans:"Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);margin:0;
+    padding:28px 14px 60px;line-height:1.6;overflow-x:hidden;
+    background-image:radial-gradient(circle,rgba(255,255,255,.045) 1px,transparent 1.6px);
+    background-size:14px 14px;
+  }
+  .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:22px;position:relative}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  /* ---- ink splats (decor) ---- */
+  .splat{position:absolute;pointer-events:none;filter:blur(.3px);z-index:0}
+  .splat i{position:absolute;display:block}
+  .blob{border-radius:58% 42% 63% 37%/55% 48% 52% 45%}
+
+  /* ---- sticker panels ---- */
+  .stk{
+    position:relative;z-index:1;background:var(--panel);
+    border:3px solid #0C0813;border-radius:14px 18px 12px 20px;
+    box-shadow:5px 6px 0 rgba(0,0,0,.45);
+    padding:18px 20px;
+  }
+  .tilt-l{transform:rotate(-.6deg)} .tilt-r{transform:rotate(.5deg)}
+  .eyebrow{
+    display:inline-block;font-weight:900;font-size:18.5px;letter-spacing:.08em;
+    padding:4px 16px;border-radius:4px 10px 6px 12px;transform:rotate(-1.2deg);
+    background:var(--ink);color:#16101F;margin-bottom:12px;
+  }
+  .eyebrow.pink{background:var(--pink);color:#fff}
+  .eyebrow.lime{background:var(--lime);color:#1A2005}
+  .eyebrow.cyan{background:var(--cyan);color:#062830}
+  .eyebrow.gold{background:var(--gold);color:#332600}
+
+  /* ---- header ---- */
+  header{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+  .logo{font-weight:900;font-size:40px;letter-spacing:.02em;line-height:1.1;transform:rotate(-1.5deg);
+    text-shadow:3px 3px 0 #0C0813, -1px -1px 0 #0C0813, 1px -1px 0 #0C0813, -1px 1px 0 #0C0813;}
+  .logo .q{color:var(--pink)}
+  .season-tag{font-size:16px;color:var(--muted);transform:rotate(-1deg)}
+  .countdown{
+    background:var(--pink);color:#fff;border:3px solid #0C0813;border-radius:50% 46% 52% 48%/48% 52% 46% 54%;
+    width:110px;height:110px;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    transform:rotate(3deg);box-shadow:4px 5px 0 rgba(0,0,0,.45);flex:none;
+  }
+  .countdown .num{font-size:36px;font-weight:900;line-height:1}
+  .countdown small{font-size:10px;font-weight:900;letter-spacing:.15em}
+
+  /* ---- turf war hero ---- */
+  .hero .headline{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+  .hero .pct{font-weight:900;font-size:72px;line-height:1;color:var(--lime);transform:rotate(-2deg);
+    text-shadow:4px 4px 0 #0C0813, -1px -1px 0 #0C0813, 1px -1px 0 #0C0813, -1px 1px 0 #0C0813;}
+  .hero .pct small{font-size:22px;color:var(--ink)}
+  .hero .goal{text-align:right;font-size:15.5px;color:var(--muted)}
+  .hero .goal b{color:var(--ink);font-size:20px}
+  .turf{position:relative;height:46px;margin-top:16px;background:#120D1C;border:3px solid #0C0813;border-radius:10px;
+    background-image:radial-gradient(circle,rgba(255,255,255,.06) 1.2px,transparent 1.8px);background-size:10px 10px;}
+  .turf .fill{position:absolute;top:0;bottom:0;left:0;width:0;background:var(--lime);
+    border-radius:6px 14px 10px 6px/6px 10px 16px 6px;transition:width 1.2s cubic-bezier(.2,.8,.3,1);}
+  .turf .fill:after{content:"";position:absolute;right:-7px;top:6px;width:16px;height:16px;background:var(--lime);border-radius:58% 42% 63% 37%/55% 48% 52% 45%}
+  .turf .fill:before{content:"";position:absolute;right:2px;bottom:-9px;width:10px;height:14px;background:var(--lime);border-radius:0 0 50% 50%}
+  .turf .tick{position:absolute;top:-10px;bottom:-10px;width:3px;background:var(--orange);border-radius:2px}
+  .turf .tick span{position:absolute;top:-24px;left:-40px;width:120px;font-size:11px;font-weight:900;color:var(--orange);transform:rotate(-2deg)}
+  .turf-notes{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:16px;font-size:15.5px;color:var(--muted)}
+  .swatch{display:inline-block;width:12px;height:12px;background:var(--lime);border:2px solid #0C0813;border-radius:4px 7px 5px 8px;vertical-align:-2px;margin-right:5px}
+
+  /* ---- grid ---- */
+  .grid{display:grid;grid-template-columns:1fr 1.3fr;gap:22px;position:relative;z-index:1}
+  @media(max-width:660px){.grid{grid-template-columns:1fr}}
+
+  /* ---- udemae ---- */
+  .udemae{text-align:center}
+  .udemae .rank{font-weight:900;font-size:88px;line-height:1;color:var(--cyan);transform:rotate(-3deg);display:inline-block;
+    text-shadow:4px 4px 0 #0C0813, -1px -1px 0 #0C0813, 1px -1px 0 #0C0813, -1px 1px 0 #0C0813;}
+  .udemae .who{font-size:16px;color:var(--muted);margin-top:2px}
+  .xpbar{height:16px;background:#120D1C;border:3px solid #0C0813;border-radius:8px;overflow:hidden;margin-top:12px}
+  .xpbar div{height:100%;background:var(--cyan);border-radius:4px 10px 8px 4px;transition:width 1.2s cubic-bezier(.2,.8,.3,1)}
+  .xplabel{font-size:15px;color:var(--muted);margin-top:6px}
+
+  /* ---- squid character ---- */
+  .squid{width:88px;height:88px;position:relative;margin:4px auto 2px}
+  .squid .body{position:absolute;inset:0;border:3px solid #0C0813;border-radius:50% 50% 44% 44%/64% 64% 38% 38%;background:var(--cyan)}
+  .squid .tent{position:absolute;bottom:-8px;width:20px;height:24px;border:3px solid #0C0813;border-radius:50% 50% 60% 60%/30% 30% 80% 80%;background:inherit}
+  .squid .tent.l{left:8px;background:var(--cyan);transform:rotate(-14deg)}
+  .squid .tent.r{right:8px;background:var(--cyan);transform:rotate(14deg)}
+  .squid .eye{position:absolute;width:20px;height:26px;background:#fff;border:3px solid #0C0813;border-radius:50%;top:24px}
+  .squid .eye.l{left:18px} .squid .eye.r{right:18px}
+  .squid .eye:after{content:"";position:absolute;width:7px;height:10px;background:#0C0813;border-radius:50%;left:4px;top:8px}
+  .squid.pink .body,.squid.pink .tent{background:var(--pink)}
+  .squid.orange .body,.squid.orange .tent{background:var(--orange)}
+  .squid.lime .body,.squid.lime .tent{background:var(--lime)}
+  .bubble{position:relative;background:#fff;color:#16101F;font-size:13.5px;font-weight:700;border:3px solid #0C0813;
+    border-radius:12px;padding:6px 10px;margin:12px auto 0;max-width:200px;transform:rotate(-1deg)}
+  .bubble:before{content:"";position:absolute;top:-12px;left:50%;margin-left:-7px;border:7px solid transparent;border-bottom-color:#0C0813}
+  .bubble:after{content:"";position:absolute;top:-7px;left:50%;margin-left:-5px;border:5px solid transparent;border-bottom-color:#fff}
+  .gearchips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
+  .gear{font-size:12.5px;font-weight:900;padding:2px 10px;border:2.5px solid #0C0813;border-radius:99px;background:var(--panel2);color:var(--muted)}
+  .gear b{color:var(--gold);margin-right:3px}
+
+  /* ---- tasks ---- */
+  .tasks{list-style:none;padding:0;margin:6px 0 0}
+  .tasks li{display:flex;gap:12px;align-items:center;font-size:19px;padding:11px 2px;border-bottom:2px dashed var(--line);cursor:pointer;user-select:none}
+  .tasks li:last-child{border-bottom:none}
+  .tasks li:hover{background:rgba(255,255,255,.03)}
+  .tasks .box{width:21px;height:21px;border:3px solid #0C0813;border-radius:5px 9px 6px 8px;background:#120D1C;flex:none;position:relative}
+  .tasks li.done .box{background:var(--lime)}
+  .tasks li.done .box:after{content:"";position:absolute;left:3px;top:1px;width:8px;height:11px;border:solid #1A2005;border-width:0 3.5px 3.5px 0;transform:rotate(40deg)}
+  .tasks li.done .tt{text-decoration:line-through;text-decoration-thickness:3px;text-decoration-color:var(--pink);color:var(--faint)}
+  .unsync{font-size:10px;font-weight:900;color:#331F00;background:var(--orange);border:2px solid #0C0813;border-radius:99px;padding:1px 8px;margin-left:auto;flex:none}
+  .addrow{display:flex;gap:8px;margin-top:12px}
+  .addrow input{flex:1;background:#120D1C;border:3px solid #0C0813;border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:17px;padding:9px 12px;outline:none}
+  .addrow input:focus{border-color:var(--cyan)}
+  .addrow button{background:var(--pink);color:#fff;font-weight:900;font-size:14.5px;border:3px solid #0C0813;border-radius:8px 12px 9px 11px;padding:8px 16px;cursor:pointer;box-shadow:2px 3px 0 rgba(0,0,0,.4)}
+  .addrow button:active{transform:translate(2px,3px);box-shadow:none}
+  .synchint{font-size:15.5px;color:var(--faint);margin-top:10px}
+  .synchint b{color:var(--orange)}
+  .todaybtn{font-size:14.5px;font-weight:900;padding:3px 12px;border:2.5px solid #0C0813;border-radius:99px;background:var(--panel2);color:var(--muted);cursor:pointer;flex:none}
+  .todaybtn.on{background:var(--gold);color:#332600}
+  .del{color:var(--faint);font-weight:900;cursor:pointer;padding:0 5px;flex:none}
+  .del:hover{color:var(--pink)}
+  .tchip{font-family:var(--mono);font-size:14.5px;font-weight:700;padding:2px 9px;border:2px solid #0C0813;border-radius:6px;flex:none;white-space:nowrap}
+  .tchip.pH{background:var(--pink);color:#fff}
+  .tchip.pM{background:var(--orange);color:#331F00}
+  .tchip.pL{background:var(--panel2);color:var(--muted)}
+  .tchip.over{background:var(--pink);color:#fff}
+  .tchip.today{background:var(--orange);color:#331F00}
+  .tchip.fut{background:var(--panel2);color:var(--muted)}
+  .addrow select,.addrow input[type=date]{background:#120D1C;border:3px solid #0C0813;border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:15.5px;padding:8px 8px;outline:none;flex:none}
+  .addrow select:focus,.addrow input[type=date]:focus{border-color:var(--cyan)}
+  .addrow{flex-wrap:wrap}
+  .overwarn{font-size:13.5px;font-weight:900;color:var(--pink);margin-top:8px}
+  .grp{border:2.5px solid var(--line);border-radius:10px;margin-bottom:10px;background:rgba(0,0,0,.14)}
+  .grp .ghead{display:flex;align-items:center;gap:10px;padding:11px 14px;font-weight:900;font-size:20px;user-select:none}
+  #allhead{cursor:pointer}
+  #allhead:hover{background:rgba(255,255,255,.03)}
+  .groupgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px;align-items:start}
+  .groupgrid[hidden]{display:none}
+  @media(max-width:640px){.groupgrid{grid-template-columns:1fr}}
+  .groupgrid .grp{margin-bottom:0;background:var(--panel2)}
+  .groupgrid .ghead{font-size:19px;padding:9px 12px}
+  .groupgrid .gbody{padding:0 10px 6px}
+  .groupgrid .tasks li{font-size:18px;gap:8px;padding:9px 0}
+  .grp .arw{color:var(--faint);font-size:10px;width:12px;flex:none}
+  .grp .cnt{font-family:var(--mono);font-size:15px;color:var(--muted);margin-left:auto;flex:none}
+  .grp .gbody{padding:0 12px 8px}
+  .gsel{background:#120D1C;border:2px solid #0C0813;border-radius:6px;color:var(--ink);font-size:12.5px;padding:2px 4px;flex:none;max-width:120px}
+  .showdone{font-size:12px;color:var(--muted);display:inline-flex;gap:6px;align-items:center;cursor:pointer;margin:2px 0 10px}
+  .emptytask{color:var(--faint);font-size:15.5px;padding:8px 2px}
+  /* グループ内のクイック追加 */
+  .gplus{color:var(--lime);font-size:19px;font-weight:900;line-height:1}
+  .gplus:hover{color:var(--ink)}
+  .gadd{margin-top:4px;gap:6px}
+  .gadd input{flex:1;background:#120D1C;border:2px solid #0C0813;border-radius:7px;color:var(--ink);font-family:var(--sans);font-size:15.5px;padding:6px 10px;outline:none}
+  .gadd input:focus{border-color:var(--cyan)}
+  .gadd button{background:var(--panel2);color:var(--lime);font-weight:900;font-size:15px;border:2px solid #0C0813;border-radius:7px;padding:5px 13px;cursor:pointer;flex:none}
+  .gadd button:hover{background:var(--lime);color:#1A2005}
+  /* タスク名のその場編集 */
+  .editinp{flex:1;min-width:0;background:#120D1C;border:2px solid var(--cyan);border-radius:6px;color:var(--ink);font-family:var(--sans);font-size:17px;padding:4px 9px;outline:none}
+
+  /* ---- ambient bg splats ---- */
+  .amb{position:fixed;z-index:0;pointer-events:none;border-radius:58% 42% 63% 37%/55% 48% 52% 45%;animation:floaty 9s ease-in-out infinite}
+
+  /* ---- daily ---- */
+  .daily{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .daily .streak{font-family:var(--mono);font-weight:700;font-size:30px;color:var(--orange);line-height:1}
+  .daily .streak small{display:block;font-size:10px;letter-spacing:.15em;color:var(--muted);font-family:var(--sans);font-weight:900}
+  .daily .mission{font-size:17px}
+  .daily .mission b{color:var(--ink)}
+  .daily .dreward{font-size:12.5px;color:var(--muted)}
+  .dstamp{font-weight:900;font-size:13.5px;padding:3px 12px;border:3px solid #0C0813;border-radius:8px 12px 9px 11px;transform:rotate(-4deg);margin-left:auto}
+  .dstamp.yes{background:var(--lime);color:#1A2005}
+  .dstamp.no{background:var(--panel2);color:var(--faint)}
+  /* ---- team ---- */
+  .team{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:6px}
+  .mate{background:var(--panel2);border:3px solid #0C0813;border-radius:14px 10px 16px 12px;padding:14px 10px 12px;text-align:center;box-shadow:3px 4px 0 rgba(0,0,0,.4)}
+  .mate:nth-child(odd){transform:rotate(-.9deg)} .mate:nth-child(even){transform:rotate(.8deg)}
+  .mate .mname{font-weight:900;font-size:18px;margin-top:6px}
+
+  /* ---- funnel ---- */
+  .frow{display:grid;grid-template-columns:120px 1fr 64px;align-items:center;gap:10px;font-size:16px;margin-top:7px}
+  .frow .bar{height:16px;background:#120D1C;border:2px solid #0C0813;border-radius:6px;overflow:hidden}
+  .frow .bar div{height:100%;background:var(--lime);border-radius:3px 8px 6px 3px}
+  .frow .v{text-align:right;color:var(--muted);font-weight:700}
+  .note{font-size:15px;color:var(--faint);margin-top:10px;transform:rotate(-.5deg)}
+
+  /* ---- boss cards ---- */
+  .bosses{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:6px}
+  .boss{background:var(--panel2);border:3px solid #0C0813;border-radius:10px 16px 12px 14px;padding:12px 14px;position:relative;box-shadow:3px 4px 0 rgba(0,0,0,.4)}
+  .boss:nth-child(odd){transform:rotate(-.8deg)} .boss:nth-child(even){transform:rotate(.7deg)}
+  .boss .name{font-weight:900;font-size:18.5px}
+  .boss .reward{font-family:var(--mono);font-weight:700;color:var(--lime);font-size:20px;margin:2px 0}
+  .boss .next{font-size:15px;color:var(--muted);line-height:1.5}
+  .stamp{position:absolute;top:-12px;right:-8px;font-size:12px;font-weight:900;letter-spacing:.05em;
+    padding:3px 10px;border:2.5px solid #0C0813;border-radius:6px 12px 8px 10px;transform:rotate(6deg);box-shadow:2px 2px 0 rgba(0,0,0,.4)}
+  .stamp.wait{background:var(--orange);color:#331F00}
+  .stamp.go{background:var(--lime);color:#1A2005}
+  .stamp.new{background:var(--cyan);color:#062830}
+  .boss.hidden-b{border-style:dashed;border-color:var(--pink);background:transparent}
+  .boss.hidden-b .name{color:var(--pink);font-size:18.5px}
+  .boss.hidden-b .next{color:var(--muted)}
+
+  @keyframes pop{0%{transform:scale(0) rotate(-8deg)}70%{transform:scale(1.15) rotate(2deg)}100%{transform:scale(1)}}
+  .pop{animation:pop .5s cubic-bezier(.2,.8,.3,1.2) both}
+
+  /* ---- ambient motion ---- */
+  @keyframes floaty{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(7px,-12px) rotate(4deg)}}
+  .splat i{animation:floaty 8s ease-in-out infinite}
+  .splat:nth-child(2) i{animation-duration:11s;animation-delay:-3s}
+  .splat:nth-child(3) i{animation-duration:9s;animation-delay:-6s}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  .udemae .squid{animation:bob 3.2s ease-in-out infinite}
+  .team .squid{animation:bob 3.8s ease-in-out infinite}
+  .team .mate:nth-child(2) .squid{animation-delay:-1.2s}
+  .team .mate:nth-child(3) .squid{animation-delay:-2.4s}
+  @keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.12)}}
+  .squid .eye{animation:blink 4.6s ease-in-out infinite}
+  .squid .eye.r{animation-delay:.05s}
+  @keyframes wob{0%,100%{transform:rotate(3deg) scale(1)}50%{transform:rotate(-1deg) scale(1.04)}}
+  .countdown{animation:wob 5s ease-in-out infinite}
+  @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+  .turf .fill i{position:absolute;top:0;bottom:0;width:30%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);animation:shimmer 3.5s ease-in-out infinite}
+
+  /* swimming squid crossing the screen */
+  .swimmer{position:fixed;top:24%;left:-140px;z-index:0;pointer-events:none;opacity:.5;animation:swim 26s linear infinite}
+  .swimmer .squid{transform:scale(.5) rotate(90deg);margin:0}
+  @keyframes swim{0%{left:-140px;top:24%}25%{top:20%}50%{top:28%}75%{top:22%}100%{left:110%;top:26%}}
+
+  /* click ink splat */
+  .click-splat{position:fixed;z-index:99;pointer-events:none;border-radius:58% 42% 63% 37%/55% 48% 52% 45%;animation:splatpop .9s ease-out forwards}
+  @keyframes splatpop{0%{scale:0;opacity:1}35%{scale:1.2;opacity:1}100%{scale:1;opacity:0}}
+
+  @media(prefers-reduced-motion:reduce){
+    .turf .fill,.xpbar div{transition:none}
+    .pop,.splat i,.squid,.squid .eye,.countdown,.turf .fill i,.swimmer,.click-splat,.amb{animation:none}
+    .swimmer{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- decor splats -->
+  <div class="splat" style="top:-16px;left:-30px"><i class="blob" style="width:90px;height:70px;background:var(--pink);opacity:.55;transform:rotate(20deg)"></i><i class="blob" style="width:22px;height:18px;background:var(--pink);opacity:.55;left:95px;top:40px"></i></div>
+  <div class="splat" style="top:230px;right:-40px"><i class="blob" style="width:110px;height:85px;background:var(--cyan);opacity:.4;transform:rotate(-15deg)"></i><i class="blob" style="width:16px;height:16px;background:var(--cyan);opacity:.4;left:-18px;top:70px"></i></div>
+  <div class="splat" style="bottom:180px;left:-46px"><i class="blob" style="width:100px;height:80px;background:var(--orange);opacity:.35;transform:rotate(35deg)"></i></div>
+
+  <div class="swimmer"><div class="squid pink"><div class="tent l"></div><div class="tent r"></div><div class="body"></div><div class="eye l"></div><div class="eye r"></div></div></div>
+
+  <header>
+    <div>
+      <div class="logo">LIENS <span class="q">QUEST</span></div>
+      <div class="season-tag">シーズン1「勝ちパターン発見」 07.24 – 08.31 ／ 毎月シーズン更新</div>
+    </div>
+    <div class="countdown pop">
+      <span class="num" id="days">--</span>
+      <small>DAYS LEFT</small>
+    </div>
+  </header>
+
+  <!-- turf war -->
+  <section class="stk tilt-l hero">
+    <span class="eyebrow pink">ナワバリバトル — クリア20万を塗り切れ！</span>
+    <div class="headline">
+      <div class="pct pop num"><span id="pct">48</span><small>%</small></div>
+      <div class="goal">塗装済み <b class="num" id="mrr">9.6万</b> ／ クリア 20万・エクストラ 30万<br>
+      <span style="font-size:12px">クリアまで <span class="num" id="remain">10.4万</span>・単発案件 <span class="num" id="tanp">0/10万</span></span></div>
+    </div>
+    <div class="turf">
+      <div class="fill" id="fill"><i></i></div>
+      <div class="tick" style="left:57%"><span>既知ボス全撃破 17.1万</span></div>
+      <div class="tick" style="left:66.7%;background:var(--pink)"><span style="top:auto;bottom:-24px;color:var(--pink)">クリア 20万</span></div>
+    </div>
+    <div class="turf-notes">
+      <span><span class="swatch"></span>和食料理店 3.0万 ＋ 車屋（顧問）6.6万</span>
+      <span>バーの右端＝エクストラ30万（最終ボス）</span>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="stk tilt-r udemae">
+      <span class="eyebrow cyan">プレイヤー</span>
+      <div class="squid pop"><div class="tent l"></div><div class="tent r"></div><div class="body"></div><div class="eye l"></div><div class="eye r"></div></div>
+      <div class="who">代表 — ウデマエ <span class="rank pop num" id="rank" style="font-size:44px;vertical-align:-6px">C-</span></div>
+      <div class="xpbar"><div id="xpfill" style="width:0"></div></div>
+      <div class="xplabel num" id="xplabel">XP 0 / 100 で C へ</div>
+      <div class="bubble" id="motd">今日も塗るぞ</div>
+      <div class="gearchips">
+        <span class="gear"><b>★</b>対面の勘</span>
+        <span class="gear"><b>★</b>高速構築</span>
+        <span class="gear"><b>★</b>不屈（12年もの）</span>
+      </div>
+    </section>
+
+    <section class="stk tilt-l">
+      <span class="eyebrow lime">勝ちパターン計測</span>
+      <div id="funnel"></div>
+      <div class="note">→ シーズン終了時にここに残った転換率が「LIENS の勝ちパターン公式」になる</div>
+    </section>
+  </div>
+
+  <section class="stk tilt-l">
+    <span class="eyebrow pink">今日のバトル — <span id="todaydate"></span></span>
+    <div class="daily" style="margin-bottom:4px">
+      <div class="streak" id="streak">0<small>連続日数</small></div>
+      <div style="flex:1;min-width:200px">
+        <div class="mission">今日のクエストを<b>全部塗ったら</b>ご褒美解禁</div>
+        <div class="addrow" style="margin-top:6px">
+          <input id="rewardinp" type="text" placeholder="今日のご褒美を書く（例：夜にアイス＋ゲーム1時間）" maxlength="40">
+        </div>
+      </div>
+      <span class="dstamp no" id="dstamp">未達成</span>
+    </div>
+    <ul class="tasks" id="todaylist"></ul>
+    <div class="synchint" id="todayhint"></div>
+  </section>
+
+  <section class="stk">
+    <span class="eyebrow orange" style="background:var(--orange);color:#331F00">📁 全クエスト — グループ別</span>
+    <div class="grp">
+      <div class="ghead" id="allhead">
+        <span class="arw" id="allarw">▶</span>
+        <span style="flex:1">ぜんぶ見る</span>
+        <span class="cnt" id="allcnt"></span>
+      </div>
+      <div class="groupgrid" id="groups" hidden></div>
+    </div>
+    <div class="overwarn" id="overwarn" hidden></div>
+    <div class="addrow">
+      <input id="newgroup" type="text" placeholder="新しいグループ名（会社名など）" maxlength="20" style="flex:1">
+      <button id="addgroupbtn" type="button">＋グループ</button>
+    </div>
+    <div class="addrow">
+      <input id="newtask" type="text" placeholder="新しいクエストを書く…" maxlength="60" style="flex:1 1 100%">
+      <select id="newgroupsel" title="グループ"></select>
+      <input id="newdue" type="date" title="期限">
+      <select id="newpri" title="優先度">
+        <option value="high">優先度 高</option>
+        <option value="med" selected>優先度 中</option>
+        <option value="low">優先度 低</option>
+      </select>
+      <button id="addbtn" type="button">受注！</button>
+    </div>
+    <div class="synchint">「☀今日」で今日のバトルに編成／タップで完了（当日中は線付きで残る。もう一度タップで戻せる）、<b>✎で文章を直す</b>（Enterで確定・Escで取り消し）、✕で削除、▤でグループ移動、▲▼でグループ並び替え。各グループの下の入力欄から<b>そのグループへ直接追加</b>できる。期限切れは赤チップ。成約・BNI参加などの戦果は Claude に報告して XP とナワバリに反映。<b>この端末が初めてなら、下の「復元」にバックアップJSONを貼る</b></div>
+    <div class="addrow" style="border-top:2px dashed var(--line);padding-top:12px">
+      <button id="bakcopy" type="button" style="background:var(--cyan);color:#062830">データをコピー</button>
+      <button id="bakfile" type="button" style="background:var(--gold);color:#332600">ファイルに保存</button>
+      <button id="bakload" type="button" style="background:var(--panel2);color:var(--muted)">復元</button>
+      <span class="synchint" id="bakinfo" style="margin-top:4px;flex:1 1 100%"></span>
+    </div>
+    <div id="bakpanel" hidden style="margin-top:8px">
+      <textarea id="baktext" rows="5" style="width:100%;background:#120D1C;border:3px solid #0C0813;border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:13px;padding:9px 12px;outline:none"></textarea>
+      <div class="addrow">
+        <button id="bakapply" type="button">この内容で復元する</button>
+        <button id="bakclose" type="button" style="background:var(--panel2);color:var(--muted)">閉じる</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="stk tilt-r">
+    <span class="eyebrow pink">ボスリスト — パイプライン</span>
+    <div class="bosses">
+      <div class="boss"><span class="stamp wait">契約待ち</span>
+        <div class="name">ITサポート</div><div class="reward">+5.5万</div>
+        <div class="next">先方事情で待機中。8月頭に状況確認の連絡</div></div>
+      <div class="boss"><span class="stamp go">準備中</span>
+        <div class="name">整体</div><div class="reward">+1.0万</div>
+        <div class="next">無料期間を開始させる</div></div>
+      <div class="boss"><span class="stamp new">初回接触</span>
+        <div class="name">レンタルルーム</div><div class="reward">+1.0万</div>
+        <div class="next">デモを作って見せる</div></div>
+      <div class="boss"><span class="stamp new">興味あり</span>
+        <div class="name">ゲストハウス</div><div class="reward">+?</div>
+        <div class="next">無料トライアルを提案する</div></div>
+      <div class="boss"><span class="stamp new">面談待ち</span>
+        <div class="name">MEO紹介案件</div><div class="reward">単発5〜10万＋月額</div>
+        <div class="next">規約準拠版で提案。回答電話は済み、面談日確定→資料作成</div></div>
+      <div class="boss"><span class="stamp new">探索中</span>
+        <div class="name">受託開発</div><div class="reward">単発10万級</div>
+        <div class="next">1on1・BNIで「開発リソースあり」を明示して探す。下請けOK</div></div>
+      <div class="boss hidden-b">
+        <div class="name">??? ×2</div><div class="reward" style="color:var(--pink)">+6万級</div>
+        <div class="next">隠しボス（顧問級）。既知ボス全撃破で17.1万＝クリア目前——エクストラ30万には顧問級×2をBNIの海で発見して倒す</div></div>
+    </div>
+  </section>
+
+  <section class="stk tilt-r">
+    <span class="eyebrow cyan">チーム LIENS</span>
+    <div class="team">
+      <div class="mate">
+        <div class="squid"><div class="tent l"></div><div class="tent r"></div><div class="body"></div><div class="eye l"></div><div class="eye r"></div></div>
+        <div class="mname">代表</div>
+      </div>
+      <div class="mate">
+        <div class="squid orange"><div class="tent l"></div><div class="tent r"></div><div class="body"></div><div class="eye l"></div><div class="eye r"></div></div>
+        <div class="mname">ひろや</div>
+      </div>
+      <div class="mate">
+        <div class="squid pink"><div class="tent l"></div><div class="tent r"></div><div class="body"></div><div class="eye l"></div><div class="eye r"></div></div>
+        <div class="mname">さば</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const DATA = {
+    mrr: 9.6, goal: 30, clear: 20,
+    tanpatsu: { now: 0, goal: 10 },
+    xp: 20,
+    // グループ・タスクの種は持たない。実データは各端末の localStorage にだけ置く
+    // （このページは公開URLで配信されるため、顧客名をソースに書かない）
+    groups: [],
+    tasks: [],
+    seedv: 9,
+    funnel: [["参加",0,10],["会話",0,30],["商談・デモ",0,8],["成約",0,null]],
+    deadline: "2026-08-31T23:59:59+09:00"
+  };
+  const RANKS = ["C-","C","C+","B-","B","B+","A-","A","A+","S","S+","X"];
+
+  // countdown
+  const days = Math.max(0, Math.ceil((new Date(DATA.deadline) - Date.now()) / 86400000));
+  document.getElementById("days").textContent = days;
+
+  // turf（バーはエクストラ30万まで、％表示はクリア20万基準）
+  const pct = DATA.mrr / DATA.goal * 100;
+  document.getElementById("pct").textContent = Math.round(DATA.mrr / DATA.clear * 100);
+  document.getElementById("mrr").textContent = DATA.mrr + "万";
+  document.getElementById("remain").textContent = Math.max(0, DATA.clear - DATA.mrr).toFixed(1) + "万";
+  document.getElementById("tanp").textContent = DATA.tanpatsu.now + "/" + DATA.tanpatsu.goal + "万";
+  setTimeout(()=>{ document.getElementById("fill").style.width = pct + "%"; }, 150);
+
+  // udemae
+  const ri = Math.min(RANKS.length - 1, Math.floor(DATA.xp / 100));
+  const inRank = DATA.xp - ri * 100;
+  document.getElementById("rank").textContent = RANKS[ri];
+  document.getElementById("xplabel").textContent = ri >= RANKS.length - 1
+    ? `XP ${DATA.xp}（カンスト）`
+    : `XP ${inRank} / 100 で ${RANKS[ri+1]} へ（累計 ${DATA.xp}）`;
+  setTimeout(()=>{ document.getElementById("xpfill").style.width = Math.min(100, inRank) + "%"; }, 150);
+
+  // ---- task app（旧 kanri-log を統合。この端末の localStorage が台帳）----
+  const KEY = "lq-app-v1";
+  let S = JSON.parse(localStorage.getItem(KEY) || "null")
+       || { v: 2, seed: 0, tasks: [], groups: [], today: [], reward: "", streak: 0, lastAll: null, open: {}, showDone: false };
+  S.groups = S.groups || []; S.open = S.open || {}; S.showDone = !!S.showDone;
+  if (S.allOpen === undefined) S.allOpen = true;
+  const mkid = p => p + Math.random().toString(36).slice(2, 9);
+  if (S.seed < DATA.seedv) {
+    (DATA.groups || []).forEach(name => {
+      if (!S.groups.some(g => g.name === name)) S.groups.push({ id: mkid("g"), name });
+    });
+    const byName = n => { const g = S.groups.find(g => g.name === n); return g ? g.id : undefined; };
+    DATA.tasks.forEach(sd => {
+      const ex = S.tasks.find(x => x.t === sd.t);
+      if (ex) { if (!ex.due) ex.due = sd.due; if (!ex.pri) ex.pri = sd.pri; if (!ex.gid && sd.g) ex.gid = byName(sd.g); }
+      // sd.sv = そのタスクが種に入ったバージョン。端末の seed より新しい種だけ追加する。
+      // （これが無いと、端末で削除済みの古い種タスクが seedv を上げるたびに復活する）
+      else if ((sd.sv || 1) > S.seed) S.tasks.push({ id: mkid("t"), t: sd.t, done: false, due: sd.due, pri: sd.pri, gid: sd.g ? byName(sd.g) : undefined });
+    });
+    // v1〜v9 の移行処理は claude.ai 版で適用済みのため、こちらには持ち込まない
+    S.seed = DATA.seedv;
+  }
+  const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+  const todayStr = new Date().toLocaleDateString("sv-SE");
+  // 日付が変わったら、前日までに完了したタスクを「今日のバトル」から自動で外す（未完了は持ち越し）
+  {
+    const stale = S.today.filter(id => { const t = S.tasks.find(x => x.id === id); return !t || (t.done && t.doneAt !== todayStr); });
+    if (stale.length) { S.today = S.today.filter(id => !stale.includes(id)); save(); }
+  }
+
+  function inkBurst() {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cols = ["#F0308F","#A8E320","#26C9E0","#F5A623"];
+    for (let i = 0; i < 14; i++) {
+      const s = document.createElement("div");
+      s.className = "click-splat";
+      const size = 16 + Math.random() * 46;
+      s.style.cssText = `left:${10 + Math.random()*80}vw;top:${15 + Math.random()*60}vh;width:${size}px;height:${size}px;`
+        + `background:${cols[i%4]};transform:rotate(${Math.random()*360}deg);animation-duration:1.3s`;
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 1300);
+    }
+  }
+
+  function checkDaily() {
+    const tt = S.tasks.filter(x => S.today.includes(x.id));
+    const all = tt.length > 0 && tt.every(x => x.done);
+    if (all && S.lastAll !== todayStr) {
+      const y = new Date(Date.now() - 86400000).toLocaleDateString("sv-SE");
+      S.streak = (S.lastAll === y) ? S.streak + 1 : 1;
+      S.lastAll = todayStr;
+      save();
+      inkBurst();
+    }
+    return all;
+  }
+
+  const PRI = { high: ["高", "pH"], med: ["中", "pM"], low: ["低", "pL"] };
+  function dueChip(x) {
+    if (!x.due || x.done) return null;
+    const c = document.createElement("span"); c.className = "tchip";
+    const md = x.due.slice(5).replace("-", "/");
+    if (x.due < todayStr) { c.classList.add("over"); c.textContent = "期限切れ " + md; }
+    else if (x.due === todayStr) { c.classList.add("today"); c.textContent = "今日まで"; }
+    else { c.classList.add("fut"); c.textContent = "〆 " + md; }
+    return c;
+  }
+  const groupName = id => { const g = S.groups.find(g => g.id === id); return g ? g.name : "未分類"; };
+  function moveSelect(x) {
+    const sel = document.createElement("select"); sel.className = "gsel";
+    const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "未分類"; sel.append(o0);
+    S.groups.forEach(g => { const o = document.createElement("option"); o.value = g.id; o.textContent = g.name; sel.append(o); });
+    sel.value = x.gid || "";
+    sel.addEventListener("click", e => e.stopPropagation());
+    sel.addEventListener("change", () => { x.gid = sel.value || undefined; save(); render(); });
+    return sel;
+  }
+  // タスク名をその場で書き換える（✎）。Enter/フォーカス外れで確定、Escで取り消し
+  // editing 中は行クリックの完了トグルを止める（確定と同時に塗られてしまうのを防ぐ）
+  let editing = false;
+  function startEdit(tt, x) {
+    const inp = document.createElement("input");
+    inp.className = "editinp"; inp.type = "text"; inp.value = x.t; inp.maxLength = 80;
+    let closed = false;
+    editing = true;
+    const done = () => setTimeout(() => { editing = false; }, 0);
+    const commit = () => {
+      if (closed) return; closed = true;
+      const v = inp.value.trim();
+      if (v) x.t = v;
+      save(); render(); done();
+    };
+    inp.addEventListener("click", e => e.stopPropagation());
+    inp.addEventListener("blur", commit);
+    inp.addEventListener("keydown", e => {
+      e.stopPropagation();
+      if (e.key === "Enter") commit();
+      if (e.key === "Escape") { closed = true; render(); done(); }
+    });
+    tt.replaceWith(inp);
+    inp.focus(); inp.select();
+  }
+
+  function row(x, isToday) {
+    const li = document.createElement("li");
+    if (x.done) li.className = "done";
+    const box = document.createElement("span"); box.className = "box";
+    const tt = document.createElement("span"); tt.className = "tt"; tt.textContent = x.t; tt.style.flex = "1";
+    li.append(box, tt);
+    const ed = document.createElement("span"); ed.className = "del"; ed.title = "文章を直す"; ed.textContent = "✎";
+    ed.addEventListener("click", e => { e.stopPropagation(); startEdit(tt, x); });
+    if (isToday && x.gid) {
+      const gc = document.createElement("span"); gc.className = "tchip fut"; gc.textContent = groupName(x.gid);
+      li.append(gc);
+    }
+    if (x.pri && PRI[x.pri] && !x.done) {
+      const p = document.createElement("span"); p.className = "tchip " + PRI[x.pri][1]; p.textContent = PRI[x.pri][0];
+      li.append(p);
+    }
+    const dc = dueChip(x); if (dc) li.append(dc);
+    if (isToday) {
+      const rb = document.createElement("span"); rb.className = "del"; rb.title = "今日から外す"; rb.textContent = "↩";
+      rb.addEventListener("click", e => {
+        e.stopPropagation();
+        S.today = S.today.filter(id => id !== x.id);
+        save(); render();
+      });
+      li.append(ed, rb);
+    }
+    if (!isToday) {
+      const tb = document.createElement("span");
+      tb.className = "todaybtn" + (S.today.includes(x.id) ? " on" : "");
+      tb.textContent = "☀今日";
+      tb.addEventListener("click", e => {
+        e.stopPropagation();
+        const i = S.today.indexOf(x.id);
+        if (i >= 0) S.today.splice(i, 1); else S.today.push(x.id);
+        save(); render();
+      });
+      const mv = document.createElement("span"); mv.className = "del"; mv.title = "グループ移動"; mv.textContent = "▤";
+      mv.addEventListener("click", e => { e.stopPropagation(); mv.replaceWith(moveSelect(x)); });
+      const del = document.createElement("span"); del.className = "del"; del.textContent = "✕";
+      del.addEventListener("click", e => {
+        e.stopPropagation();
+        S.tasks = S.tasks.filter(y => y.id !== x.id);
+        S.today = S.today.filter(id => id !== x.id);
+        save(); render();
+      });
+      li.append(tb, ed, mv, del);
+    }
+    li.addEventListener("click", () => {
+      if (editing) return;
+      x.done = !x.done; x.doneAt = x.done ? todayStr : undefined; save(); render();
+    });
+    return li;
+  }
+
+  // ＋を押したグループだけ入力欄を開く。addFocus は再描画後もフォーカスを戻すため（連続追加用）
+  let addOpen = null, addFocus = null;
+  function render() {
+    document.getElementById("todaydate").textContent = todayStr.slice(5).replace("-", "/");
+    const tl = document.getElementById("todaylist"); tl.innerHTML = "";
+    const tt = S.tasks.filter(x => S.today.includes(x.id));
+    if (!tt.length) {
+      const li = document.createElement("li"); li.style.cursor = "default";
+      const s = document.createElement("span"); s.className = "tt"; s.style.color = "var(--faint)";
+      s.textContent = "朝イチで、下の全クエストから「☀今日」を押して編成しよう";
+      li.append(s); tl.append(li);
+    }
+    tt.forEach(x => tl.append(row(x, true)));
+    const PW = { high: 0, med: 1, low: 2 };
+    const cmp = (a, b) =>
+      (a.done - b.done)
+      || ((a.due || "9999") < (b.due || "9999") ? -1 : (a.due || "9999") > (b.due || "9999") ? 1 : 0)
+      || ((PW[a.pri] ?? 1) - (PW[b.pri] ?? 1));
+    const wrap = document.getElementById("groups"); wrap.innerHTML = "";
+    const allOpen = !!S.allOpen;
+    document.getElementById("allarw").textContent = allOpen ? "▼" : "▶";
+    const remainAll = S.tasks.filter(x => !x.done && !S.today.includes(x.id)).length;
+    document.getElementById("allcnt").textContent = `残り ${remainAll} 件`;
+    wrap.hidden = !allOpen;
+    const blocks = [...S.groups.map(g => ({ id: g.id, name: g.name })), { id: "", name: "未分類" }];
+    blocks.forEach(b => {
+      const members = S.tasks.filter(x => (x.gid || "") === b.id);
+      if (b.id === "" && !members.length) return;
+      const items = members.filter(x => !S.today.includes(x.id));
+      // 完了は当日中だけ取り消し線で残す（誤タップ対策）。翌日から非表示
+      const shown = items.filter(x => !x.done || x.doneAt === todayStr).sort(cmp);
+      const remain = items.filter(x => !x.done).length;
+      const inToday = members.filter(x => S.today.includes(x.id)).length;
+      const grp = document.createElement("div"); grp.className = "grp";
+      const head = document.createElement("div"); head.className = "ghead";
+      const nm = document.createElement("span"); nm.textContent = b.name; nm.style.flex = "1";
+      const cnt = document.createElement("span"); cnt.className = "cnt";
+      cnt.textContent = remain + "件" + (inToday ? `（☀${inToday}）` : "");
+      const key = b.id || "_none";
+      const plus = document.createElement("span");
+      plus.className = "del gplus"; plus.textContent = "＋"; plus.title = "このグループにクエストを足す";
+      plus.addEventListener("click", e => {
+        e.stopPropagation();
+        addOpen = (addOpen === key) ? null : key;
+        addFocus = addOpen; save(); render();
+      });
+      head.append(nm, cnt, plus);
+      if (b.id) {
+        const gi = S.groups.findIndex(g => g.id === b.id);
+        const mkArrow = (txt, di, ok) => {
+          const a = document.createElement("span"); a.className = "del"; a.textContent = txt; a.title = "並び替え";
+          if (!ok) a.style.visibility = "hidden";
+          a.addEventListener("click", e => {
+            e.stopPropagation();
+            [S.groups[gi], S.groups[gi + di]] = [S.groups[gi + di], S.groups[gi]];
+            save(); render();
+          });
+          return a;
+        };
+        head.append(mkArrow("▲", -1, gi > 0), mkArrow("▼", 1, gi < S.groups.length - 1));
+      }
+      if (b.id && !members.length) {
+        const gd = document.createElement("span"); gd.className = "del"; gd.textContent = "✕";
+        gd.addEventListener("click", e => {
+          e.stopPropagation();
+          S.groups = S.groups.filter(g => g.id !== b.id);
+          save(); render();
+        });
+        head.append(gd);
+      }
+      const body = document.createElement("div"); body.className = "gbody";
+      const ul = document.createElement("ul"); ul.className = "tasks";
+      shown.forEach(x => ul.append(row(x, false)));
+      if (!shown.length) { const d = document.createElement("div"); d.className = "emptytask"; d.textContent = inToday ? "全部☀今日に出撃中" : "タスクなし"; ul.append(d); }
+      body.append(ul);
+      // グループ右上の ＋ を押したときだけ、この枠に直接クエストを足す欄を出す
+      if (addOpen === key) {
+        const ga = document.createElement("div"); ga.className = "addrow gadd";
+        const gin = document.createElement("input"); gin.type = "text"; gin.maxLength = 60;
+        gin.placeholder = b.name + " に足すクエスト…（Enterで受注・Escで閉じる）";
+        const gbt = document.createElement("button"); gbt.type = "button"; gbt.textContent = "受注";
+        const gadd = () => {
+          const v = gin.value.trim();
+          if (!v) { addOpen = null; save(); render(); return; }
+          S.tasks.push({ id: mkid("t"), t: v, done: false, pri: "med", gid: b.id || undefined });
+          gin.value = ""; addFocus = key; save(); render();
+        };
+        gbt.addEventListener("click", e => { e.stopPropagation(); gadd(); });
+        gin.addEventListener("click", e => e.stopPropagation());
+        gin.addEventListener("keydown", e => {
+          e.stopPropagation();
+          if (e.key === "Enter") gadd();
+          if (e.key === "Escape") { addOpen = null; render(); }
+        });
+        ga.append(gin, gbt);
+        body.append(ga);
+        if (addFocus === key) { addFocus = null; setTimeout(() => gin.focus(), 0); }
+      }
+      grp.append(head, body);
+      wrap.append(grp);
+    });
+    const over = S.tasks.filter(x => !x.done && x.due && x.due < todayStr).length;
+    const ow = document.getElementById("overwarn");
+    ow.hidden = !over;
+    ow.textContent = over ? `⚠ 期限切れが ${over} 件ある！先に塗るか、期限を引き直せ` : "";
+    const gs = document.getElementById("newgroupsel");
+    const cur = gs.value;
+    gs.innerHTML = "";
+    const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "未分類"; gs.append(o0);
+    S.groups.forEach(g => { const o = document.createElement("option"); o.value = g.id; o.textContent = g.name; gs.append(o); });
+    if ([...gs.options].some(o => o.value === cur)) gs.value = cur;
+    const all = checkDaily();
+    document.getElementById("streak").innerHTML = `${S.streak}<small>連続日数</small>`;
+    const ds = document.getElementById("dstamp");
+    ds.textContent = all ? "達成！" : "未達成";
+    ds.className = "dstamp " + (all ? "yes" : "no");
+    document.getElementById("todayhint").textContent = all
+      ? `🎉 ご褒美解禁：${S.reward || "（ご褒美を上に書いておこう）"}`
+      : (tt.length ? `進捗 ${tt.filter(x => x.done).length} / ${tt.length}` : "");
+    const ri = document.getElementById("rewardinp");
+    if (ri.value !== S.reward) ri.value = S.reward;
+  }
+  render();
+  document.getElementById("rewardinp").addEventListener("input", e => { S.reward = e.target.value; save(); render(); });
+  document.getElementById("allhead").addEventListener("click", () => { S.allOpen = !S.allOpen; save(); render(); });
+  document.getElementById("addgroupbtn").addEventListener("click", () => {
+    const inp = document.getElementById("newgroup");
+    const v = inp.value.trim();
+    if (!v || S.groups.some(g => g.name === v)) return;
+    const g = { id: mkid("g"), name: v };
+    S.groups.push(g); S.open[g.id] = true;
+    inp.value = ""; save(); render();
+  });
+  document.getElementById("addbtn").addEventListener("click", () => {
+    const inp = document.getElementById("newtask");
+    const v = inp.value.trim();
+    if (!v) return;
+    const gsel = document.getElementById("newgroupsel").value;
+    S.tasks.push({
+      id: mkid("t"), t: v, done: false,
+      due: document.getElementById("newdue").value || undefined,
+      pri: document.getElementById("newpri").value,
+      gid: gsel || undefined
+    });
+    if (gsel) S.open[gsel] = true; else S.open["_none"] = true;
+    inp.value = ""; document.getElementById("newdue").value = "";
+    save(); render();
+  });
+  document.getElementById("newtask").addEventListener("keydown", e => {
+    if (e.key === "Enter") document.getElementById("addbtn").click();
+  });
+
+  // ---- バックアップ／復元（再公開で端末内データが消える事故への保険）----
+  const exportJSON = () => JSON.stringify({ app: "liens-quest", saved: new Date().toISOString(), state: S }, null, 1);
+  const setBakInfo = () => {
+    document.getElementById("bakinfo").textContent =
+      `最終バックアップ: ${S.lastBackup || "なし"} ／ ページの更新（再公開）で端末内のデータが消えることがある。区切りごとにコピーして Claude のチャットに貼っておけば復元できる`;
+  };
+  const markBak = () => { S.lastBackup = todayStr; save(); setBakInfo(); };
+  const openBakPanel = v => {
+    const ta = document.getElementById("baktext");
+    document.getElementById("bakpanel").hidden = false;
+    ta.value = v; return ta;
+  };
+  document.getElementById("bakcopy").addEventListener("click", () => {
+    const d = exportJSON();
+    const ta = openBakPanel(d); ta.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(d).then(markBak, () => {});
+    } else { try { document.execCommand("copy"); markBak(); } catch (e) {} }
+  });
+  document.getElementById("bakfile").addEventListener("click", async () => {
+    if (!(window.claude && window.claude.downloads)) { document.getElementById("bakcopy").click(); return; }
+    try {
+      await window.claude.downloads.save({ filename: `liens-quest-backup-${todayStr}.json`, data: exportJSON() });
+      markBak();
+    } catch (err) {
+      if (!err || err.code !== "declined") document.getElementById("bakcopy").click();
+    }
+  });
+  document.getElementById("bakload").addEventListener("click", () => {
+    const ta = openBakPanel("");
+    ta.placeholder = "バックアップのJSONをここに貼り付けて「この内容で復元する」を押す";
+    ta.focus();
+  });
+  document.getElementById("bakapply").addEventListener("click", () => {
+    const ta = document.getElementById("baktext");
+    try {
+      const p = JSON.parse(ta.value);
+      const st = p.state || p;
+      if (!Array.isArray(st.tasks) || !Array.isArray(st.groups)) throw new Error("bad shape");
+      S = st; S.open = S.open || {}; S.today = S.today || [];
+      save();
+      try { location.reload(); } catch (e) {}
+      render(); setBakInfo();
+      document.getElementById("bakpanel").hidden = true;
+    } catch (e) {
+      ta.value = "⚠ 読み込めなかった。JSONが最初の { から最後の } まで欠けずに貼られているか確認して、もう一度貼り付けて";
+    }
+  });
+  document.getElementById("bakclose").addEventListener("click", () => { document.getElementById("bakpanel").hidden = true; });
+  setBakInfo();
+
+  // ambient background ink
+  const AMB = ["#F0308F","#A8E320","#26C9E0","#F5A623"];
+  for (let i = 0; i < 18; i++) {
+    const s = document.createElement("div");
+    s.className = "amb";
+    const w = 26 + Math.random() * 120;
+    s.style.cssText = `left:${Math.random()*96}vw;top:${Math.random()*96}vh;`
+      + `width:${w}px;height:${w*(0.65+Math.random()*0.6)}px;background:${AMB[i%4]};`
+      + `opacity:${(0.07+Math.random()*0.16).toFixed(2)};transform:rotate(${Math.floor(Math.random()*360)}deg);`
+      + `animation-duration:${(7+Math.random()*9).toFixed(1)}s;animation-delay:-${(Math.random()*9).toFixed(1)}s`;
+    document.body.appendChild(s);
+  }
+
+  // motd (squid speech)
+  const motd =
+    DATA.mrr >= DATA.goal ? "陣地、全部塗った！！" :
+    days <= 7  ? "ラストスパート！インク残量気にすんな！" :
+    DATA.xp === 0 ? "退院したら塗りはじめっぞ" :
+    pct >= 57  ? "既知ボス全撃破ライン突破！隠しボス探すぞ" :
+    "今日も塗るぞ〜";
+  document.getElementById("motd").textContent = motd;
+
+  // funnel（実績/8月の行動目標）
+  document.getElementById("funnel").innerHTML = DATA.funnel.map(([k,v,t]) =>
+    `<div class="frow"><span style="font-weight:700">${k}</span><div class="bar"><div style="width:${t ? Math.min(100, v/t*100) : 0}%"></div></div><span class="v num">${v}${t ? "/" + t : ""}</span></div>`
+  ).join("");
+
+  // click ink splat
+  const INKS = ["#F0308F","#A8E320","#26C9E0","#F5A623"];
+  addEventListener("pointerdown", e => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const c = INKS[Math.floor(Math.random() * INKS.length)];
+    const n = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement("div");
+      s.className = "click-splat";
+      const size = i === 0 ? 30 + Math.random() * 28 : 7 + Math.random() * 15;
+      const dx = i === 0 ? 0 : (Math.random() - .5) * 110;
+      const dy = i === 0 ? 0 : (Math.random() - .5) * 110;
+      s.style.cssText = `left:${e.clientX + dx - size/2}px;top:${e.clientY + dy - size/2}px;`
+        + `width:${size}px;height:${size}px;background:${c};transform:rotate(${Math.random()*360}deg)`;
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 950);
+    }
+  });
+</script>
+</body>
+</html>
