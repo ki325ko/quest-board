@@ -172,6 +172,11 @@
   .gadd button:hover{background:var(--lime);color:#1A2005}
   /* タスク名のその場編集 */
   .editinp{flex:1;min-width:0;background:#120D1C;border:2px solid var(--cyan);border-radius:6px;color:var(--ink);font-family:var(--sans);font-size:17px;padding:4px 9px;outline:none}
+  /* 閲覧モード（共有リンクで開いた人）— 触れる要素を消す */
+  body.viewonly .del,body.viewonly .todaybtn,body.viewonly .gplus,body.viewonly .gadd{display:none}
+  body.viewonly .tasks li{cursor:default}
+  body.viewonly .tasks li:hover{background:none}
+  .viewbadge{font-weight:900;font-size:13px;padding:2px 10px;border:2.5px solid #0C0813;border-radius:99px;background:var(--gold);color:#332600;margin-left:8px;white-space:nowrap}
 
   /* ---- ambient bg splats ---- */
   .amb{position:fixed;z-index:0;pointer-events:none;border-radius:58% 42% 63% 37%/55% 48% 52% 45%;animation:floaty 9s ease-in-out infinite}
@@ -370,6 +375,28 @@
         <button id="bakclose" type="button" style="background:var(--panel2);color:var(--muted)">閉じる</button>
       </div>
     </div>
+    <div class="addrow" style="border-top:2px dashed var(--line);padding-top:12px">
+      <button id="syncbtn" type="button" style="background:var(--lime);color:#1A2005">⚙ 同期設定</button>
+      <button id="sharebtn" type="button" style="background:var(--panel2);color:var(--muted)">共有リンクをコピー</button>
+      <span class="synchint" id="syncinfo" style="margin-top:4px;flex:1 1 100%"></span>
+    </div>
+    <div id="syncpanel" hidden style="margin-top:8px">
+      <div class="synchint" style="margin-top:0">
+        盤面（クエストと今日のバトル）を private リポジトリ <b>ki325ko/quest-data</b> に置いて共有する。
+        ご褒美・連続日数はこの端末だけに残る。
+      </div>
+      <div class="addrow">
+        <input id="tokw" type="password" placeholder="書き込み用トークン（代表だけが入れる）" style="flex:1 1 100%">
+      </div>
+      <div class="addrow">
+        <input id="tokr" type="password" placeholder="閲覧配布用トークン（read-only。共有リンクの生成に使う）" style="flex:1 1 100%">
+      </div>
+      <div class="addrow">
+        <button id="syncsave" type="button">保存して同期する</button>
+        <button id="syncpull" type="button" style="background:var(--cyan);color:#062830">今すぐ読み込む</button>
+        <button id="syncclose" type="button" style="background:var(--panel2);color:var(--muted)">閉じる</button>
+      </div>
+    </div>
   </section>
 
   <section class="stk tilt-r">
@@ -455,9 +482,28 @@
     : `XP ${inRank} / 100 で ${RANKS[ri+1]} へ（累計 ${DATA.xp}）`;
   setTimeout(()=>{ document.getElementById("xpfill").style.width = Math.min(100, inRank) + "%"; }, 150);
 
-  // ---- task app（旧 kanri-log を統合。この端末の localStorage が台帳）----
+  // ---- 共有の設定（盤面は private リポジトリ ki325ko/quest-data の board.json に置く）----
+  // 代表 = 書き込み用トークンを入れて編集する（edit）
+  // ひろや・さば = 共有リンク #t=<閲覧用トークン>&m=view を開くだけ（view）
+  const SYNC = { owner: "ki325ko", repo: "quest-data", path: "board.json", branch: "master" };
+  const TKEY = "lq-sync-v1";
+  let SY = JSON.parse(localStorage.getItem(TKEY) || "null") || { w: "", r: "", mode: "local" };
+  (() => {
+    const h = location.hash.replace(/^#/, "");
+    if (!h) return;
+    const q = new URLSearchParams(h);
+    const t = q.get("t");
+    if (!t) return;
+    SY = { w: "", r: t, mode: q.get("m") === "view" ? "view" : "local" };
+    localStorage.setItem(TKEY, JSON.stringify(SY));
+    history.replaceState(null, "", location.pathname); // トークンをURLに残さない
+  })();
+  let MODE = SY.mode === "view" ? "view" : (SY.w ? "edit" : "local");
+  const curToken = () => (MODE === "view" ? SY.r : SY.w);
+
+  // ---- task app（旧 kanri-log を統合。端末の localStorage ＋ 上の共有データが台帳）----
   const KEY = "lq-app-v1";
-  let S = JSON.parse(localStorage.getItem(KEY) || "null")
+  let S = (MODE === "view" ? null : JSON.parse(localStorage.getItem(KEY) || "null"))
        || { v: 2, seed: 0, tasks: [], groups: [], today: [], reward: "", streak: 0, lastAll: null, open: {}, showDone: false };
   S.groups = S.groups || []; S.open = S.open || {}; S.showDone = !!S.showDone;
   if (S.allOpen === undefined) S.allOpen = true;
@@ -477,7 +523,11 @@
     // v1〜v9 の移行処理は claude.ai 版で適用済みのため、こちらには持ち込まない
     S.seed = DATA.seedv;
   }
-  const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+  const save = () => {
+    if (MODE === "view") return;          // 閲覧モードは端末に残さない・書き戻さない
+    localStorage.setItem(KEY, JSON.stringify(S));
+    schedulePush();                        // 代表のときだけクラウドへ（関数宣言なので巻き上げ済み）
+  };
   const todayStr = new Date().toLocaleDateString("sv-SE");
   // 日付が変わったら、前日までに完了したタスクを「今日のバトル」から自動で外す（未完了は持ち越し）
   {
@@ -605,7 +655,7 @@
       });
       li.append(tb, ed, mv, del);
     }
-    li.addEventListener("click", () => {
+    if (MODE !== "view") li.addEventListener("click", () => {
       if (editing) return;
       x.done = !x.done; x.doneAt = x.done ? todayStr : undefined; save(); render();
     });
@@ -814,6 +864,118 @@
   });
   document.getElementById("bakclose").addEventListener("click", () => { document.getElementById("bakpanel").hidden = true; });
   setBakInfo();
+
+  // ---- 共有（GitHub contents API で private リポジトリの board.json を読み書き）----
+  // 共有するのは tasks / groups / today。ご褒美・連続日数・開閉状態は各端末のもの
+  let cloudSha = null, pushTimer = null, pushing = false, pushAgain = false;
+  const apiURL = () => `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`;
+  const b64enc = s => {
+    const b = new TextEncoder().encode(s); let out = "";
+    for (let i = 0; i < b.length; i += 0x8000) out += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(out);
+  };
+  const b64dec = b => new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g, "")), c => c.charCodeAt(0)));
+  const hhmm = () => new Date().toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" });
+  function setSync(msg) { const el = document.getElementById("syncinfo"); if (el) el.innerHTML = msg; }
+  function syncIdle() {
+    if (MODE === "view") setSync(`閲覧モード（代表の盤面）／最終読み込み ${lastSync || "—"}。30秒ごとに自動更新`);
+    else if (MODE === "edit") setSync(`同期オン（代表）／最終同期 ${lastSync || "—"}。変更は自動でチームに反映される`);
+    else setSync("この端末だけで動いている（共有オフ）。⚙同期設定 からトークンを入れると共有できる");
+  }
+  let lastSync = "";
+
+  async function pull(quiet) {
+    const tk = curToken();
+    if (!tk) { syncIdle(); return; }
+    if (!quiet) setSync("読み込み中…");
+    try {
+      const r = await fetch(apiURL() + "?ref=" + SYNC.branch + "&_=" + Date.now(),
+        { headers: { Authorization: "Bearer " + tk, Accept: "application/vnd.github+json" }, cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      const b = JSON.parse(b64dec(j.content));
+      cloudSha = j.sha;
+      S.tasks = b.tasks || []; S.groups = b.groups || []; S.today = b.today || [];
+      if (MODE !== "view") localStorage.setItem(KEY, JSON.stringify(S));
+      lastSync = hhmm(); render(); syncIdle();
+    } catch (e) {
+      setSync(`⚠ 読み込めなかった（${e.message}）。トークンの期限切れか通信エラー。⚙同期設定 を確認`);
+    }
+  }
+
+  function schedulePush() {
+    if (MODE !== "edit") return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(doPush, 1500);   // 連続操作をまとめてから1回だけ送る
+  }
+  async function doPush() {
+    if (MODE !== "edit" || !SY.w) return;
+    if (pushing) { pushAgain = true; return; }
+    pushing = true;
+    setSync("保存中…");
+    const hd = { Authorization: "Bearer " + SY.w, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
+    try {
+      const body = {
+        message: `board ${new Date().toISOString().slice(0, 16)}`,
+        content: b64enc(JSON.stringify({ v: 1, updatedAt: new Date().toISOString(), by: "代表", tasks: S.tasks, groups: S.groups, today: S.today }, null, 1)),
+        branch: SYNC.branch
+      };
+      if (cloudSha) body.sha = cloudSha;
+      let r = await fetch(apiURL(), { method: "PUT", headers: hd, body: JSON.stringify(body) });
+      if (r.status === 409 || r.status === 422) {   // sha ずれ → 取り直して1回だけ再送
+        const g = await fetch(apiURL() + "?ref=" + SYNC.branch, { headers: hd, cache: "no-store" });
+        if (g.ok) { cloudSha = (await g.json()).sha; body.sha = cloudSha; }
+        r = await fetch(apiURL(), { method: "PUT", headers: hd, body: JSON.stringify(body) });
+      }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      cloudSha = (await r.json()).content.sha;
+      lastSync = hhmm(); syncIdle();
+    } catch (e) {
+      setSync(`⚠ 保存できなかった（${e.message}）。この端末には残っているので、通信が戻ったら何か操作すれば再送される`);
+    } finally {
+      pushing = false;
+      if (pushAgain) { pushAgain = false; schedulePush(); }
+    }
+  }
+
+  // 同期設定パネル
+  document.getElementById("syncbtn").addEventListener("click", () => {
+    const p = document.getElementById("syncpanel");
+    p.hidden = !p.hidden;
+    if (!p.hidden) { document.getElementById("tokw").value = SY.w || ""; document.getElementById("tokr").value = SY.r || ""; }
+  });
+  document.getElementById("syncclose").addEventListener("click", () => { document.getElementById("syncpanel").hidden = true; });
+  document.getElementById("syncsave").addEventListener("click", async () => {
+    SY.w = document.getElementById("tokw").value.trim();
+    SY.r = document.getElementById("tokr").value.trim();
+    SY.mode = SY.w ? "edit" : "local";
+    localStorage.setItem(TKEY, JSON.stringify(SY));
+    MODE = SY.w ? "edit" : "local";
+    document.getElementById("syncpanel").hidden = true;
+    if (MODE === "edit") { await pull(); await doPush(); } else syncIdle();
+  });
+  document.getElementById("syncpull").addEventListener("click", () => pull());
+  document.getElementById("sharebtn").addEventListener("click", () => {
+    if (!SY.r) { setSync("⚠ 先に ⚙同期設定 で「閲覧配布用トークン」を入れる（read-only のトークン）"); return; }
+    const url = location.origin + location.pathname + "#t=" + SY.r + "&m=view";
+    const done = () => setSync("共有リンクをコピーした。ひろや・さばに送れば、開くだけで代表の盤面が見える");
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => openBakPanel(url));
+    else openBakPanel(url);
+  });
+
+  // 閲覧モードの見た目と自動更新
+  if (MODE === "view") {
+    document.body.classList.add("viewonly");
+    const tag = document.querySelector(".season-tag");
+    if (tag) tag.insertAdjacentHTML("beforeend", '<span class="viewbadge">閲覧モード｜代表の盤面</span>');
+    ["newgroup", "newtask", "bakcopy", "rewardinp", "syncbtn"].forEach(id => {
+      const e = document.getElementById(id); const row = e && e.closest(".addrow");
+      if (row) row.hidden = true;
+    });
+    setInterval(() => pull(true), 30000);
+  }
+  syncIdle();
+  if (curToken()) pull();
 
   // ambient background ink
   const AMB = ["#F0308F","#A8E320","#26C9E0","#F5A623"];
