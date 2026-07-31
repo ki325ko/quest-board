@@ -482,7 +482,7 @@
   // ---- 共有の設定（盤面は private リポジトリ ki325ko/quest-data の board.json に置く）----
   // 3人ともトークン1つ（Contents: Read and write）で編集できる。
   // 共有リンク #t=<token>&n=<名前> を開くと、その端末に取り込まれて同期が始まる。
-  const SYNC = { owner: "ki325ko", repo: "quest-data", path: "board.json", branch: "master" };
+  const SYNC = { owner: "ki325ko", repo: "quest-data", path: "board.json" }; // ブランチは指定しない（リポジトリのデフォルトに従う）
   const TKEY = "lq-sync-v1";
   let SY = JSON.parse(localStorage.getItem(TKEY) || "null") || { w: "", name: "" };
   (() => {
@@ -926,7 +926,7 @@
     if (editing) return;                     // 名前を書き換えている最中は割り込まない
     if (!quiet) setSync("読み込み中…");
     try {
-      const r = await fetch(apiURL() + "?ref=" + SYNC.branch + "&_=" + Date.now(),
+      const r = await fetch(apiURL() + "?_=" + Date.now(),
         { headers: { Authorization: "Bearer " + SY.w, Accept: "application/vnd.github+json" }, cache: "no-store" });
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
@@ -962,7 +962,7 @@
     const hd = { Authorization: "Bearer " + SY.w, Accept: "application/vnd.github+json", "Content-Type": "application/json" };
     try {
       // 送る前に必ず取り直してマージする（他の人の変更を消さないため）
-      const g0 = await fetch(apiURL() + "?ref=" + SYNC.branch + "&_=" + Date.now(), { headers: hd, cache: "no-store" });
+      const g0 = await fetch(apiURL() + "?_=" + Date.now(), { headers: hd, cache: "no-store" });
       if (g0.ok) {
         const j0 = await g0.json();
         cloudSha = j0.sha;
@@ -970,11 +970,11 @@
         localStorage.setItem(KEY, JSON.stringify(S));
         render();
       }
-      const body = { message: `board ${new Date().toISOString().slice(0, 16)} by ${SY.name || "?"}`, content: b64enc(boardJSON()), branch: SYNC.branch };
+      const body = { message: `board ${new Date().toISOString().slice(0, 16)} by ${SY.name || "?"}`, content: b64enc(boardJSON()) };
       if (cloudSha) body.sha = cloudSha;
       let r = await fetch(apiURL(), { method: "PUT", headers: hd, body: JSON.stringify(body) });
       if (r.status === 409 || r.status === 422) {   // 送っている間に誰かが書いた → もう一度だけ取り直して合流
-        const g = await fetch(apiURL() + "?ref=" + SYNC.branch + "&_=" + Date.now(), { headers: hd, cache: "no-store" });
+        const g = await fetch(apiURL() + "?_=" + Date.now(), { headers: hd, cache: "no-store" });
         if (g.ok) {
           const j = await g.json(); cloudSha = j.sha;
           try { mergeBoard(JSON.parse(b64dec(j.content))); } catch (e) {}
