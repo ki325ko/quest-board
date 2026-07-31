@@ -316,6 +316,22 @@
     </section>
   </div>
 
+  <section class="stk tilt-r" id="setupnotice" hidden>
+    <span class="eyebrow gold">⚠ この端末はまだ共有に入っていない</span>
+    <div class="synchint" style="margin-top:0">
+      盤面は3人で共有されているが、<b>この端末にはまだ鍵が入っていない</b>ので空に見える。<br>
+      受け取った<b>共有リンク</b>（末尾に <span class="num">#t=…</span> が付いたURL）から開けばそのまま入れる。
+      リンクが手元になければ、下にトークンを貼る。
+    </div>
+    <div class="addrow">
+      <input id="ntok" type="password" placeholder="共有トークン（github_pat_… ）" style="flex:1 1 100%">
+    </div>
+    <div class="addrow">
+      <input id="nname" type="text" maxlength="8" placeholder="あなたの名前（代表 / ひろや / さば）" style="flex:1">
+      <button id="njoin" type="button">参加する</button>
+    </div>
+  </section>
+
   <section class="stk tilt-l">
     <span class="eyebrow pink">今日のバトル — <span id="todaydate"></span></span>
     <div class="daily" style="margin-bottom:4px">
@@ -1015,6 +1031,17 @@
     const done = () => setSync("共有リンクをコピーした。ひろや・さばに送れば、開くだけで同じ盤面に入れる（3人とも編集できる）");
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => openBakPanel(url));
     else openBakPanel(url);
+  });
+
+  // 共有に入っていない端末には、その場で参加できる案内を出す
+  const notice = document.getElementById("setupnotice");
+  notice.hidden = (MODE === "edit");
+  document.getElementById("njoin").addEventListener("click", () => {
+    const t = document.getElementById("ntok").value.trim();
+    if (!t) { setSync("⚠ トークンが空。共有リンクから開くのが確実"); return; }
+    SY = { w: t, name: document.getElementById("nname").value.trim() };
+    localStorage.setItem(TKEY, JSON.stringify(SY));
+    location.reload();
   });
 
   // 共有オンなら定期的に取り込む（編集中・送信待ち中は避ける）
